@@ -238,7 +238,8 @@ void GDScriptLambdaSelfCallable::call(const Variant **p_arguments, int p_argcoun
 				bool was_freed = false;
 				captures[i].get_validated_object_with_check(was_freed);
 				if (was_freed) {
-					ERR_PRINT(vformat(R"(Lambda capture at index %d was freed. Passed "null" instead.)", i));
+					//This is intended behaviour, don't print an error here
+					//ERR_PRINT(vformat(R"(Lambda capture at index %d was freed. Passed "null" instead.)", i));
 					static Variant nil;
 					args.write[i] = &nil;
 				}
