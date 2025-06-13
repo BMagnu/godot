@@ -838,7 +838,7 @@ Error GDScript::reload(bool p_keep_state) {
 					depended_script_path = "built-in";
 				}
 				for (const GDScriptParser::ParserError &pe : depended_parser->get_errors()) {
-					_err_print_error("GDScript::reload", depended_script_path.utf8().get_data(), pe.line, vformat("Dependency Parse Error: %s", pe.message, depended_script_path).utf8().get_data(), false, ERR_HANDLER_SCRIPT);
+					_err_print_error("GDScript::reload", depended_script_path.utf8().get_data(), pe.line, vformat("Dependency Parse Error: %s at %s", pe.message, depended_script_path).utf8().get_data(), false, ERR_HANDLER_SCRIPT);
 				}
 			}
 		} else if (!analyzer.get_parsers_with_dependent_errors().is_empty()) {
@@ -865,7 +865,7 @@ Error GDScript::reload(bool p_keep_state) {
 					depended_script_path = "built-in";
 				}
 				for (const GDScriptParser::ParserError &pe : depended_parser->get_errors()) {
-					_err_print_error("GDScript::reload", depended_script_path.utf8().get_data(), pe.line, vformat("Dependency Parse Error: %s", pe.message, depended_script_path).utf8().get_data(), false, ERR_HANDLER_SCRIPT);
+					_err_print_error("GDScript::reload", depended_script_path.utf8().get_data(), pe.line, vformat("Dependency Parse Error: %s at %s", pe.message, depended_script_path).utf8().get_data(), false, ERR_HANDLER_SCRIPT);
 				}
 			}
 		} else if (valid) {
