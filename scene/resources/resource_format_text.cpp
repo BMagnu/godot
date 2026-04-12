@@ -43,6 +43,8 @@
 #define FORMAT_VERSION_COMPAT 3
 
 #define _printerr() ERR_PRINT(String(res_path + ":" + itos(lines) + " - Parse Error: " + error_text).utf8().get_data());
+#define _printerr_r_message() {String error_msg = String(res_path + ":" + itos(lines) + " - Parse Error: " + error_text); ERR_PRINT(error_msg.utf8().get_data()); if (r_error_message) *r_error_message = error_text; }
+
 
 ///
 
@@ -405,7 +407,7 @@ Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourcePars
 	}
 }
 
-Error ResourceLoaderText::load() {
+Error ResourceLoaderText::load(String* r_error_message) {
 	if (error != OK) {
 		return error;
 	}
@@ -418,21 +420,21 @@ Error ResourceLoaderText::load() {
 		if (!next_tag.fields.has("path")) {
 			error = ERR_FILE_CORRUPT;
 			error_text = "Missing 'path' in external resource tag";
-			_printerr();
+			_printerr_r_message();
 			return error;
 		}
 
 		if (!next_tag.fields.has("type")) {
 			error = ERR_FILE_CORRUPT;
 			error_text = "Missing 'type' in external resource tag";
-			_printerr();
+			_printerr_r_message();
 			return error;
 		}
 
 		if (!next_tag.fields.has("id")) {
 			error = ERR_FILE_CORRUPT;
 			error_text = "Missing 'id' in external resource tag";
-			_printerr();
+			_printerr_r_message();
 			return error;
 		}
 
@@ -451,6 +453,8 @@ Error ResourceLoaderText::load() {
 				// Silence a warning that can happen during the initial filesystem scan due to cache being regenerated.
 				if (ResourceLoader::get_resource_uid(path) != uid) {
 					WARN_PRINT(String(res_path + ":" + itos(lines) + " - ext_resource, invalid UID: " + uidt + " - using text path instead: " + path).utf8().get_data());
+					if (r_error_message)
+						*r_error_message = String(res_path + ":" + itos(lines) + " - ext_resource, invalid UID: " + uidt + " - using text path instead: " + path);
 				}
 #else
 				WARN_PRINT(String(res_path + ":" + itos(lines) + " - ext_resource, invalid UID: " + uidt + " - using text path instead: " + path).utf8().get_data());
@@ -474,7 +478,7 @@ Error ResourceLoaderText::load() {
 			if (ResourceLoader::get_abort_on_missing_resources()) {
 				error = ERR_FILE_CORRUPT;
 				error_text = "[ext_resource] referenced non-existent resource at: " + path;
-				_printerr();
+				_printerr_r_message();
 				return error;
 			} else {
 				ResourceLoader::notify_dependency_error(local_path, path, type);
@@ -484,7 +488,7 @@ Error ResourceLoaderText::load() {
 		error = VariantParser::parse_tag(&stream, lines, error_text, next_tag, &rp);
 
 		if (error) {
-			_printerr();
+			_printerr_r_message();
 			return error;
 		}
 
@@ -503,14 +507,14 @@ Error ResourceLoaderText::load() {
 		if (!next_tag.fields.has("type")) {
 			error = ERR_FILE_CORRUPT;
 			error_text = "Missing 'type' in external resource tag";
-			_printerr();
+			_printerr_r_message();
 			return error;
 		}
 
 		if (!next_tag.fields.has("id")) {
 			error = ERR_FILE_CORRUPT;
 			error_text = "Missing 'id' in external resource tag";
-			_printerr();
+			_printerr_r_message();
 			return error;
 		}
 
@@ -553,7 +557,7 @@ Error ResourceLoaderText::load() {
 						obj = missing_resource;
 					} else {
 						error_text += "Can't create sub resource of type: " + type;
-						_printerr();
+						_printerr_r_message();
 						error = ERR_FILE_CORRUPT;
 						return error;
 					}
@@ -562,7 +566,7 @@ Error ResourceLoaderText::load() {
 				Resource *r = Object::cast_to<Resource>(obj);
 				if (!r) {
 					error_text += "Can't create sub resource of type, because not a resource: " + type;
-					_printerr();
+					_printerr_r_message();
 					error = ERR_FILE_CORRUPT;
 					return error;
 				}
@@ -597,7 +601,7 @@ Error ResourceLoaderText::load() {
 			error = VariantParser::parse_tag_assign_eof(&stream, lines, error_text, next_tag, assign, value, &rp);
 
 			if (error) {
-				_printerr();
+				_printerr_r_message();
 				return error;
 			}
 
@@ -640,7 +644,7 @@ Error ResourceLoaderText::load() {
 			} else {
 				error = ERR_FILE_CORRUPT;
 				error_text = "Premature end of file while parsing [sub_resource]";
-				_printerr();
+				_printerr_r_message();
 				return error;
 			}
 		}
@@ -661,7 +665,7 @@ Error ResourceLoaderText::load() {
 
 		if (is_scene) {
 			error_text += "found the 'resource' tag on a scene file!";
-			_printerr();
+			_printerr_r_message();
 			error = ERR_FILE_CORRUPT;
 			return error;
 		}
@@ -686,7 +690,7 @@ Error ResourceLoaderText::load() {
 						obj = missing_resource;
 					} else {
 						error_text += "Can't create sub resource of type: " + res_type;
-						_printerr();
+						_printerr_r_message();
 						error = ERR_FILE_CORRUPT;
 						return error;
 					}
@@ -695,7 +699,7 @@ Error ResourceLoaderText::load() {
 				Resource *r = Object::cast_to<Resource>(obj);
 				if (!r) {
 					error_text += "Can't create sub resource of type, because not a resource: " + res_type;
-					_printerr();
+					_printerr_r_message();
 					error = ERR_FILE_CORRUPT;
 					return error;
 				}
@@ -714,7 +718,7 @@ Error ResourceLoaderText::load() {
 
 			if (error) {
 				if (error != ERR_FILE_EOF) {
-					_printerr();
+					_printerr_r_message();
 				} else {
 					error = OK;
 					if (cache_mode != ResourceFormatLoader::CACHE_MODE_IGNORE) {
@@ -763,7 +767,7 @@ Error ResourceLoaderText::load() {
 			} else if (!next_tag.name.is_empty()) {
 				error = ERR_FILE_CORRUPT;
 				error_text = "Extra tag found when parsing main resource file";
-				_printerr();
+				_printerr_r_message();
 				return error;
 			} else {
 				break;
@@ -794,7 +798,7 @@ Error ResourceLoaderText::load() {
 	if (next_tag.name == "node") {
 		if (!is_scene) {
 			error_text += "found the 'node' tag on a resource file!";
-			_printerr();
+			_printerr_r_message();
 			error = ERR_FILE_CORRUPT;
 			return error;
 		}
@@ -826,7 +830,7 @@ Error ResourceLoaderText::load() {
 		return error;
 	} else {
 		error_text += "Unknown tag in file: " + next_tag.name;
-		_printerr();
+		_printerr_r_message();
 		error = ERR_FILE_CORRUPT;
 		return error;
 	}
@@ -1042,7 +1046,7 @@ Error ResourceLoaderText::rename_dependencies(Ref<FileAccess> p_f, const String 
 	return OK;
 }
 
-void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag) {
+void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag, String* r_error_message) {
 	error = OK;
 
 	lines = 1;
@@ -1058,7 +1062,7 @@ void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag) {
 
 	if (err) {
 		error = err;
-		_printerr();
+		_printerr_r_message();
 		return;
 	}
 
@@ -1080,7 +1084,7 @@ void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag) {
 	} else if (tag.name == "gd_resource") {
 		if (!tag.fields.has("type")) {
 			error_text = "Missing 'type' field in 'gd_resource' tag";
-			_printerr();
+			_printerr_r_message();
 			error = ERR_PARSE_ERROR;
 			return;
 		}
@@ -1093,7 +1097,7 @@ void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag) {
 
 	} else {
 		error_text = "Unrecognized file type: " + tag.name;
-		_printerr();
+		_printerr_r_message();
 		error = ERR_PARSE_ERROR;
 		return;
 	}
@@ -1115,7 +1119,7 @@ void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag) {
 
 		if (err) {
 			error_text = "Unexpected end of file";
-			_printerr();
+			_printerr_r_message();
 			error = ERR_FILE_CORRUPT;
 		}
 	}
@@ -1354,6 +1358,32 @@ ResourceUID::ID ResourceLoaderText::get_uid(Ref<FileAccess> p_f) {
 }
 
 /////////////////////
+
+Ref<Resource> ResourceFormatLoaderText::load_test_errors(const String &p_path, String& error_out) {
+	Error err;
+
+	Ref<FileAccess> f = FileAccess::open(p_path, FileAccess::READ, &err);
+
+	ERR_FAIL_COND_V_MSG(err != OK, Ref<Resource>(), "Cannot open file '" + p_path + "'.");
+
+	ResourceLoaderText loader;
+	String path = p_path;
+
+	loader.cache_mode = CACHE_MODE_REUSE;
+	loader.cache_mode_for_external = CACHE_MODE_REUSE;
+
+	loader.use_sub_threads = false;
+	loader.local_path = ProjectSettings::get_singleton()->localize_path(path);
+	loader.progress = nullptr;
+	loader.res_path = loader.local_path;
+	loader.open(f, false, &error_out);
+	err = loader.load(&error_out);
+	if (err == OK) {
+		return loader.get_resource();
+	} else {
+		return Ref<Resource>();
+	}
+}
 
 Ref<Resource> ResourceFormatLoaderText::load(const String &p_path, const String &p_original_path, Error *r_error, bool p_use_sub_threads, float *r_progress, CacheMode p_cache_mode) {
 	if (r_error) {

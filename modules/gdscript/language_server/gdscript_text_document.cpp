@@ -31,12 +31,14 @@
 #include "gdscript_text_document.h"
 
 #include "../gdscript.h"
+#include "core/io/json.h"
 #include "gdscript_extend_parser.h"
 #include "gdscript_language_protocol.h"
 
 #include "core/os/os.h"
 #include "editor/editor_settings.h"
 #include "editor/plugins/script_text_editor.h"
+#include "scene/resources/resource_format_text.h"
 #include "servers/display_server.h"
 
 void GDScriptTextDocument::_bind_methods() {
@@ -65,7 +67,13 @@ void GDScriptTextDocument::_bind_methods() {
 
 void GDScriptTextDocument::didOpen(const Variant &p_param) {
 	lsp::TextDocumentItem doc = load_document_item(p_param);
-	sync_script_content(doc.uri, doc.text);
+
+	if (doc.uri.get_extension().nocasecmp_to("tscn") == 0) {
+		load_and_test_tscn(doc.uri, doc.text);
+	}
+	else {
+		sync_script_content(doc.uri, doc.text);
+	}
 }
 
 void GDScriptTextDocument::didClose(const Variant &p_param) {
@@ -82,7 +90,12 @@ void GDScriptTextDocument::didChange(const Variant &p_param) {
 		evt.load(contentChanges[i]);
 		doc.text = evt.text;
 	}
-	sync_script_content(doc.uri, doc.text);
+	if (doc.uri.get_extension().nocasecmp_to("tscn") == 0) {
+		load_and_test_tscn(doc.uri, doc.text);
+	}
+	else {
+		sync_script_content(doc.uri, doc.text);
+	}
 }
 
 void GDScriptTextDocument::willSaveWaitUntil(const Variant &p_param) {
@@ -487,6 +500,22 @@ void GDScriptTextDocument::sync_script_content(const String &p_path, const Strin
 	GDScriptLanguageProtocol::get_singleton()->get_workspace()->parse_script(path, p_content);
 
 	EditorFileSystem::get_singleton()->update_file(path);
+}
+
+void GDScriptTextDocument::load_and_test_tscn(const String &p_path, const String &p_content) {
+	String error;
+	auto result = ResourceFormatLoaderText::singleton->load_test_errors(GDScriptLanguageProtocol::get_singleton()->get_workspace()->get_file_path(p_path), error);
+
+	Dictionary params;
+	Array errors;
+	if (result.is_null()) {
+		Dictionary current;
+		current[String("error")] = error;
+		errors.push_back(JSON::stringify(current));
+	}
+	params["diagnostics"] = errors;
+	params["uri"] = GDScriptLanguageProtocol::get_singleton()->get_workspace()->get_file_uri(p_path);
+	GDScriptLanguageProtocol::get_singleton()->notify_client("textDocument/publishDiagnostics", params);
 }
 
 void GDScriptTextDocument::show_native_symbol_in_editor(const String &p_symbol_id) {

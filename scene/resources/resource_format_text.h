@@ -114,13 +114,13 @@ class ResourceLoaderText {
 
 public:
 	Ref<Resource> get_resource();
-	Error load();
+	Error load(String* r_error_message = nullptr);
 	Error set_uid(Ref<FileAccess> p_f, ResourceUID::ID p_uid);
 	int get_stage() const;
 	int get_stage_count() const;
 	void set_translation_remapped(bool p_remapped);
 
-	void open(Ref<FileAccess> p_f, bool p_skip_first_tag = false);
+	void open(Ref<FileAccess> p_f, bool p_skip_first_tag = false, String* r_error_message = nullptr);
 	String recognize(Ref<FileAccess> p_f);
 	String recognize_script_class(Ref<FileAccess> p_f);
 	ResourceUID::ID get_uid(Ref<FileAccess> p_f);
@@ -135,6 +135,7 @@ class ResourceFormatLoaderText : public ResourceFormatLoader {
 public:
 	static ResourceFormatLoaderText *singleton;
 	virtual Ref<Resource> load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr, bool p_use_sub_threads = false, float *r_progress = nullptr, CacheMode p_cache_mode = CACHE_MODE_REUSE) override;
+	Ref<Resource> load_test_errors(const String &p_path, String& error_out);
 	virtual void get_recognized_extensions_for_type(const String &p_type, List<String> *p_extensions) const override;
 	virtual void get_recognized_extensions(List<String> *p_extensions) const override;
 	virtual bool handles_type(const String &p_type) const override;
