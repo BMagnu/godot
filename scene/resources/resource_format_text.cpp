@@ -43,7 +43,7 @@
 #define FORMAT_VERSION_COMPAT 3
 
 #define _printerr() ERR_PRINT(String(res_path + ":" + itos(lines) + " - Parse Error: " + error_text).utf8().get_data());
-#define _printerr_r_message() {String error_msg = String(res_path + ":" + itos(lines) + " - Parse Error: " + error_text); ERR_PRINT(error_msg.utf8().get_data()); if (r_error_message) *r_error_message = error_text; }
+#define _printerr_r_message() {String error_msg = String(res_path + ":" + itos(lines) + " - Parse Error: " + error_text); ERR_PRINT(error_msg.utf8().get_data()); if (r_error_message) *r_error_message = error_text; if (r_error_line) *r_error_line = lines; }
 
 
 ///
@@ -407,7 +407,7 @@ Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourcePars
 	}
 }
 
-Error ResourceLoaderText::load(String* r_error_message) {
+Error ResourceLoaderText::load(String* r_error_message, int* r_error_line) {
 	if (error != OK) {
 		return error;
 	}
@@ -1046,7 +1046,7 @@ Error ResourceLoaderText::rename_dependencies(Ref<FileAccess> p_f, const String 
 	return OK;
 }
 
-void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag, String* r_error_message) {
+void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag, String* r_error_message, int* r_error_line) {
 	error = OK;
 
 	lines = 1;
@@ -1359,7 +1359,7 @@ ResourceUID::ID ResourceLoaderText::get_uid(Ref<FileAccess> p_f) {
 
 /////////////////////
 
-Ref<Resource> ResourceFormatLoaderText::load_test_errors(const String &p_path, String& error_out) {
+Ref<Resource> ResourceFormatLoaderText::load_test_errors(const String &p_path, String& error_out, int& line) {
 	Error err;
 
 	Ref<FileAccess> f = FileAccess::open(p_path, FileAccess::READ, &err);
@@ -1376,8 +1376,8 @@ Ref<Resource> ResourceFormatLoaderText::load_test_errors(const String &p_path, S
 	loader.local_path = ProjectSettings::get_singleton()->localize_path(path);
 	loader.progress = nullptr;
 	loader.res_path = loader.local_path;
-	loader.open(f, false, &error_out);
-	err = loader.load(&error_out);
+	loader.open(f, false, &error_out, &line);
+	err = loader.load(&error_out, &line);
 	if (err == OK) {
 		return loader.get_resource();
 	} else {

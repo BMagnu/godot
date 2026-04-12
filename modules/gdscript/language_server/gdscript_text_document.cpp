@@ -504,14 +504,30 @@ void GDScriptTextDocument::sync_script_content(const String &p_path, const Strin
 
 void GDScriptTextDocument::load_and_test_tscn(const String &p_path, const String &p_content) {
 	String error;
-	auto result = ResourceFormatLoaderText::singleton->load_test_errors(GDScriptLanguageProtocol::get_singleton()->get_workspace()->get_file_path(p_path), error);
+	int line;
+	auto result = ResourceFormatLoaderText::singleton->load_test_errors(GDScriptLanguageProtocol::get_singleton()->get_workspace()->get_file_path(p_path), error, line);
 
 	Dictionary params;
 	Array errors;
 	if (result.is_null()) {
 		Dictionary current;
-		current[String("error")] = error;
-		errors.push_back(JSON::stringify(current));
+		current["code"] = -1;
+		current["message"] = error;
+		current["severity"] = 1;
+		current["source"] = "tscn";
+
+		Dictionary range;
+		Dictionary start, end;
+		start["line"] = line;
+		start["character"] = 0;
+		end["line"] = line + 1;
+		end["character"] = 0;
+		range["start"] = start;
+		range["end"] = end;
+
+		current["range"] = range;
+
+		errors.push_back(current);
 	}
 	params["diagnostics"] = errors;
 	params["uri"] = GDScriptLanguageProtocol::get_singleton()->get_workspace()->get_file_uri(p_path);
