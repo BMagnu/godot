@@ -192,7 +192,7 @@ Error ResourceLoaderText::_parse_ext_resource(VariantParser::Stream *p_stream, R
 	return err;
 }
 
-Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourceParser &parser) {
+Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourceParser &parser, String* r_error_message, int* r_error_line) {
 	Ref<PackedScene> packed_scene = ResourceLoader::get_resource_ref_override(local_path);
 	if (packed_scene.is_null()) {
 		packed_scene.instantiate();
@@ -250,7 +250,7 @@ Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourcePars
 				if (packed_scene->get_state()->get_node_count() == 0) {
 					error = ERR_FILE_CORRUPT;
 					error_text = "Instance Placeholder can't be used for inheritance.";
-					_printerr();
+					_printerr_r_message();
 					return Ref<PackedScene>();
 				}
 
@@ -288,7 +288,8 @@ Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourcePars
 					if (error == ERR_FILE_MISSING_DEPENDENCIES) {
 						// Resource loading error, just skip it.
 					} else if (error != ERR_FILE_EOF) {
-						ERR_PRINT(vformat("Parse Error: %s. [Resource file %s:%d]", error_names[error], res_path, lines));
+						error_text = vformat("Parse Error: %s. [Resource file %s:%d]", error_names[error], res_path, lines);
+						_printerr_r_message();
 						return Ref<PackedScene>();
 					} else {
 						error = OK;
@@ -369,7 +370,8 @@ Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourcePars
 
 			if (error) {
 				if (error != ERR_FILE_EOF) {
-					_printerr();
+					error_text = error_names[error];
+					_printerr_r_message();
 					return Ref<PackedScene>();
 				} else {
 					error = OK;
@@ -380,7 +382,7 @@ Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourcePars
 			if (!next_tag.fields.has("path")) {
 				error = ERR_FILE_CORRUPT;
 				error_text = "missing 'path' field from editable tag";
-				_printerr();
+				_printerr_r_message();
 				return Ref<PackedScene>();
 			}
 
@@ -392,7 +394,8 @@ Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourcePars
 
 			if (error) {
 				if (error != ERR_FILE_EOF) {
-					_printerr();
+					error_text = error_names[error];
+					_printerr_r_message();
 					return Ref<PackedScene>();
 				} else {
 					error = OK;
@@ -401,7 +404,8 @@ Ref<PackedScene> ResourceLoaderText::_parse_node_tag(VariantParser::ResourcePars
 			}
 		} else {
 			error = ERR_FILE_CORRUPT;
-			_printerr();
+			error_text = "Unknown tag: " + next_tag.name;
+			_printerr_r_message();
 			return Ref<PackedScene>();
 		}
 	}
@@ -488,6 +492,7 @@ Error ResourceLoaderText::load(String* r_error_message, int* r_error_line) {
 		error = VariantParser::parse_tag(&stream, lines, error_text, next_tag, &rp);
 
 		if (error) {
+			error_text = error_names[error];
 			_printerr_r_message();
 			return error;
 		}
@@ -601,6 +606,7 @@ Error ResourceLoaderText::load(String* r_error_message, int* r_error_line) {
 			error = VariantParser::parse_tag_assign_eof(&stream, lines, error_text, next_tag, assign, value, &rp);
 
 			if (error) {
+				error_text = error_names[error];
 				_printerr_r_message();
 				return error;
 			}
@@ -718,6 +724,7 @@ Error ResourceLoaderText::load(String* r_error_message, int* r_error_line) {
 
 			if (error) {
 				if (error != ERR_FILE_EOF) {
+					error_text = error_names[error];
 					_printerr_r_message();
 				} else {
 					error = OK;
@@ -803,7 +810,7 @@ Error ResourceLoaderText::load(String* r_error_message, int* r_error_line) {
 			return error;
 		}
 
-		Ref<PackedScene> packed_scene = _parse_node_tag(rp);
+		Ref<PackedScene> packed_scene = _parse_node_tag(rp, r_error_message, r_error_line);
 
 		if (!packed_scene.is_valid()) {
 			return error;
@@ -1062,6 +1069,7 @@ void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag, String
 
 	if (err) {
 		error = err;
+		error_text = error_names[err];
 		_printerr_r_message();
 		return;
 	}
@@ -1070,7 +1078,7 @@ void ResourceLoaderText::open(Ref<FileAccess> p_f, bool p_skip_first_tag, String
 		format_version = tag.fields["format"];
 		if (format_version > FORMAT_VERSION) {
 			error_text = "Saved with newer format version";
-			_printerr();
+			_printerr_r_message();
 			error = ERR_FILE_UNRECOGNIZED;
 			return;
 		}

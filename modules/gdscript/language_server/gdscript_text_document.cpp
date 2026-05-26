@@ -505,11 +505,17 @@ void GDScriptTextDocument::sync_script_content(const String &p_path, const Strin
 void GDScriptTextDocument::load_and_test_tscn(const String &p_path, const String &p_content) {
 	String error;
 	int line;
+
+	bool abort_settings = ResourceLoader::get_abort_on_missing_resources();
+	ResourceLoader::set_abort_on_missing_resources(true);
+
 	auto result = ResourceFormatLoaderText::singleton->load_test_errors(GDScriptLanguageProtocol::get_singleton()->get_workspace()->get_file_path(p_path), error, line);
+
+	ResourceLoader::set_abort_on_missing_resources(abort_settings);
 
 	Dictionary params;
 	Array errors;
-	if (result.is_null()) {
+	if (result.is_null() || error != "") {
 		Dictionary current;
 		current["code"] = -1;
 		current["message"] = error;
